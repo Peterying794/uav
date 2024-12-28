@@ -1,0 +1,579 @@
+----------------------------------------------------------------------------------------------------------------------------------------------
+Github
+地址：
+https://github.com/maozhenguo666/block
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+我用了如下model
+GCN:
+CTRGCN,CTRGCN(FR-Head)
+TDGCN,TDGCN(FR-Head)
+HDGCN,HDGCN(FR-Head)
+TCAGCN,TCAGCN(FR-Head)
+BlockGCN,
+DEGCN,DEGCN(JBF)
+
+Transformer:STTFormer
+
+(FR-Head中一个辅助特征细化头，可以加在gcn网络上）
+
+MMCL-Action
+MMCL-Action(FR-Head)
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+环境安装
+
+cd ICMEW2024-Track10
+
+conda env create -f mix_GCN.yml
+
+cd /mnt/workspace/ICMEW2024-Track10/
+
+pip install -e torchlight
+pip install torch_topological
+注意：mix_GCN.yml已经基本满足所有model运行的环境
+
+
+有时运行会报一个import错误
+输入这个命令修改：sed -i "s/from collections import Iterable/from collections.abc import Iterable/g" /root/miniconda3/envs/mix_GCN/lib/python3.10/site-packages/torchpack/config.py 后面的文件地址修改
+
+缺什么补什么就行
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+一.数据预处理
+数据集：不同model数据集类型不同
+所有预处理的文件代码在：
+block\Process_data\Process_mixgcn
+block\Process_data\Process_mixformer
+block\Process_data\Process_block_hy
+
+blockgcn，Hyperformer，hdgcn：
+将train_joint,test_A_joint,test_B_joint用chaneg.py变换维度
+用int.py生成一个全为0的数组，数据类型为int64，长度为4307，int64.npy
+将train_label,test_A_label，int64用changelabel.py转换，从一维变成二维
+最后，mirtest.py用于合成测试集test.npz(x_test,y_test)和验证集val.npz(x_test,y_test)，mir.py用于合成训练集train.npz(x_train,y_train,x_test,y_test)
+
+
+mixgcn：
+将train_joint,test_A_joint,test_B_joint用transform.py变换维度
+用shengcheng45990.py生成一个全为0的数组，数据类型为int64，长度为4307，int64.npy
+最后，mir.py用于合成测试集test.npz(x_test,y_test)和验证集val.npz(x_test,y_test)，minger.py用于合成训练集train.npz(x_train,y_train,x_test,y_test)
+
+
+mixformer：
+将train_joint,test_A_joint,test_B_joint用trans2d.py变换维度
+用int.py生成一个全为0的数组，数据类型为int64，长度为4307，int64.npy
+最后，mirtest.py用于合成测试集test.npz(x_test,y_test)和验证集val.npz(x_test,y_test)，mir.py用于合成训练集train.npz(x_train,y_train,x_test,y_test)
+
+所有数据集生成后改config文件中的data_path即可
+
+FR-Head+ctrgcn,STTFormer，Degcn,FR-Head+tdgcn，FR-Head+hdgcn，FR-Head+tcagcn:
+用的比赛给的数据集（没进行预处理），加了个int64.py生成的0label
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+二.训练           
+
+！！！！！！！！！！！！！！！！！注意：出现ntu文件夹是由于当时训练就在项目中的config文件修改，不是使用ntu数据集！！！！！！！！！！！！！！！！！！！！！！！！
+
+
+mixgcn(ctrgcn,mstgcn,tdgcn),都改成处理3d的了，所以不需要再用2d模型了，model的代码在block\Model_inference\Mix_GCN\model中，注意blockgcn在block\BlockGCN中训练了
+训练指令：
+cd block\Model_inference\Mix_GCN
+
+CTRGCN:
+
+python main.py --config ./config/ctrgcn_V1_J_3d.yaml  --device 0
+python main.py --config ./config/ctrgcn_V1_B_3d.yaml --device 0
+python main.py --config ./config/ctrgcn_V1_JM_3d.yaml --device 0
+python main.py --config ./config/ctrgcn_V1_BM_3d.yaml --device 0
+
+TDGCN:
+
+python main.py --config ./config/tdgcn_V1_J_3d.yaml --device 0
+python main.py --config ./config/tdgcn_V1_B_3d.yaml --device 0
+python main.py --config ./config/tdgcn_V1_JM_3d.yaml --device 0
+python main.py --config ./config/tdgcn_V1_BM_3d.yaml --device 0
+
+
+
+blockgcn:
+cd block\BlockGCN
+
+python main.py --config config/nturgbd-cross-subject/default.yaml --model model.BlockGCN.Model --work-dir work_dir/ntu/csub/BlockGCN_decay_110_120_140_epochs_new_8heads_deterministic --device 0 1
+
+python main.py --config config/nturgbd-cross-subject/vel.yaml --model model.BlockGCN.Model --work-dir work_dir/ntu/csub/BlockGCN_decay_110_120_140_epochs_vel_new_8heads_deterministic --device 0 1
+
+python main.py --config config/nturgbd-cross-subject/bone.yaml --model model.BlockGCN.Model --work-dir work_dir/ntu60/csub/BlockGCN_decay_110_120_140_epochs_bone_new_8heads_deterministic --device 0 1
+
+python main.py --config config/nturgbd-cross-subject/bone_vel.yaml --model model.BlockGCN.Model --work-dir work_dir/ntu60/csub/BlockGCN_decay_110_120_140_epochs_bone_vel_new_8heads_deterministic --device 0 
+
+
+
+
+hdgcn:
+cd block\HD-GCN
+
+
+python main.py --config ./config/nturgbd-cross-subject/joint_com_1.yaml --device 0
+
+python main.py --config ./config/nturgbd-cross-subject/joint_vel_com_1.yaml --device 0
+
+python main.py --config ./config/nturgbd-cross-subject/bone_com_1.yaml --device 0
+
+python main.py --config ./config/nturgbd-cross-subject/bone_vel_com_1.yaml --device 0
+
+
+
+TCAGCN:
+python main.py --config config/nturgbd-cross-subject/joint.yaml
+
+python main.py --config config/nturgbd-cross-subject/bone.yaml
+
+python main.py --config config/nturgbd-cross-subject/joint_motion.yaml
+
+python main.py --config config/nturgbd-cross-subject/bone_motion.yaml
+
+
+MMCL:
+
+python main_MMCL.py --device 0 --config ./config/nturgbd-cross-subject/joint.yaml
+
+
+python main_MMCL.py --device 0 --config ./config/nturgbd-cross-subject/bone.yaml
+
+python main_MMCL.py --device 0 --config ./config/nturgbd-cross-subject/joint_motion.yaml
+
+
+python main_MMCL.py --device 0 --config ./config/nturgbd-cross-subject/bone_motion.yaml
+
+
+
+
+
+mixformer:
+cd block\Model_inference\Mix_Former
+python main.py --config ./config/mixformer_V1_J.yaml --device 0  
+python main.py --config ./config/mixformer_V1_B.yaml --device 0 
+python main.py --config ./config/mixformer_V1_JM.yaml --device 0 
+python main.py --config ./config/mixformer_V1_BM.yaml --device 0 
+
+请修改data位置
+
+
+以下均为FR-Head加在GCN的：
+-----------------------------------------------------------------------------------------------------
+
+FR-Head+ctrgcn
+cd  block\FR-Head
+只训练J,B在最后集成替换原来普通训练ctrgcn的J,B在B榜上的得分再集成！！！！！！！！！！！！
+
+
+python main.py --config config/uav/jctr.yaml --work-dir results/uav/jctr --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bctr.yaml --work-dir results/uav/bctr --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/jmctr.yaml --work-dir results/uav/jmctr --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bmctr.yaml --work-dir results/uav/bmctr --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+
+FR-Head+tdgcn
+cd  block\FR-Head
+只训练J,B在最后集成替换原来普通训练tdgcn的J,B在B榜上的得分再集成！！！！！！！！！！！！
+
+
+python main.py --config config/uav/jtd.yaml --work-dir results/uav/jtd --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/btd.yaml --work-dir results/uav/btd --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/jmtd.yaml --work-dir results/uav/jmtd --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bmtd.yaml --work-dir results/uav/bmtd --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+
+FR-Head+mstgcn
+cd  block\FR-Head
+只训练J,B在最后集成替换原来普通训练mstgcn的J,B在B榜上的得分再集成！！！！！！！！！！！！
+
+
+python main.py --config config/uav/jmst.yaml --work-dir results/uav/jmst --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bmst.yaml --work-dir results/uav/bmst --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/jmmst.yaml --work-dir results/uav/jmmst --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bmmst.yaml --work-dir results/uav/bmmst --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+
+
+
+FR-Head+hdgcn
+cd  block\FR-Head
+
+
+python main.py --config config/uav/jhd.yaml --work-dir results/uav/jhd --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bhd.yaml --work-dir results/uav/bhd --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/jmhd.yaml --work-dir results/uav/jmhd --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bmhd.yaml --work-dir results/uav/bmhd --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+
+FR-Head+tcagcn
+cd  block\FR-Head
+
+
+python main.py --config config/uav/jtca.yaml --work-dir results/uav/jtca --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/btca.yaml --work-dir results/uav/btca --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/jmtca.yaml --work-dir results/uav/jmtca --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bmtca.yaml --work-dir results/uav/bmtca --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+
+
+FR-Head+MMCL
+cd  block\FR-Head
+
+
+python main.py --config config/uav/jmmcl.yaml --work-dir results/uav/jmmcl --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bmmcl.yaml --work-dir results/uav/bmmcl --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/jmmmcl.yaml --work-dir results/uav/jmmmcl --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+python main.py --config config/uav/bmmmcl.yaml --work-dir results/uav/bmmmcl --cl-mode ST-Multi-Level --w-multi-cl-loss 0.1 0.2 0.5 1 --device 0
+
+
+
+STTFormer
+cd  block\STTFormer
+
+python3 main.py --config config/ntu60_xsub_joint.yaml
+
+python3 main.py --config config/ntu60_xsub_bone.yaml
+
+
+
+Degcn:
+
+degcn_model:
+python main.py --config config/nturgbd-cross-subject/degcnj.yaml --device 0
+
+python main.py --config config/nturgbd-cross-subject/degcnjm.yaml --device 0
+
+python main.py --config config/nturgbd-cross-subject/degcnb.yaml --device 0
+
+python main.py --config config/nturgbd-cross-subject/degcnbm.yaml --device 0
+
+jbf_model:
+python main.py --config config/nturgbd-cross-subject/jbfj.yaml --device 0
+
+python main.py --config config/nturgbd-cross-subject/jbfjm.yaml --device 0
+
+python main.py --config config/nturgbd-cross-subject/jbfb.yaml --device 0
+
+python main.py --config config/nturgbd-cross-subject/jbfbm.yaml --device 0
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+三.推理
+mixgcn：
+
+CTRGCN：
+python main.py --config ./config/ctrgcn_V1_J_3d.yaml --phase test --save-score True --weights /mnt/workspace/weight/ctr/j/runs-57-14592.pt --device 0
+
+python main.py --config ./config/ctrgcn_V1_B_3d.yaml --phase test --save-score True --weights /mnt/workspace/weight/ctr/b/runs-60-15360.pt --device 0
+
+python main.py --config ./config/ctrgcn_V1_JM_3d.yaml --phase test --save-score True --weights /mnt/workspace/ICMEW2024-Track10/Model_inference/Mix_GCN/output/ctrgcn_V1_JM_3D/runs-42-10962.pt --device 0
+
+python main.py --config ./config/ctrgcn_V1_BM_3d.yaml --phase test --save-score True --weights /mnt/workspace/ICMEW2024-Track10/Model_inference/Mix_GCN/output/ctrgcn_V1_BM_3D/runs-41-10701.pt --device 0
+
+
+TDGCN：
+python main.py --config ./config/tdgcn_V1_J_3d.yaml --phase test --save-score True --weights /mnt/workspace/weight/tdgcn/j3d/runs-75-19200.pt --device 0
+
+python main.py --config ./config/tdgcn_V1_B_3d.yaml --phase test --save-score True --weights /mnt/workspace/weight/tdgcn/b3d/runs-49-12544.pt --device 0
+
+python main.py --config ./config/tdgcn_V1_JM_3d.yaml --phase test --save-score True --weights /mnt/workspace/ICMEW2024-Track10/Model_inference/Mix_GCN/output/tdgcn_V1_JM_3D/runs-38-9918.pt --device 0
+
+python main.py --config ./config/tdgcn_V1_BM_3d.yaml --phase test --save-score True --weights /mnt/workspace/ICMEW2024-Track10/Model_inference/Mix_GCN/output/tdgcn_V1_BM_3D/runs-43-11223.pt --device 0
+
+注意更改权重的地址
+
+
+
+
+
+TCAGCN:
+python main.py --config <work_dir>/config.yaml --work-dir <work_dir> --weights <work_dir>/.pt
+
+改config和pt地址
+
+
+blockgcn：
+
+J
+python main.py --weights /home/featurize/data/block+数据处理/j/runs-121-30976.pt --phase test --save-score True --config config/nturgbd-cross-subject/default.yaml --model model.BlockGCN.Model --work-dir work_dir/BlockGCN_j  --device 0 1
+
+JM
+python main.py --weights /home/featurize/data/block+数据处理/jm/runs-123-31488.pt --phase test --save-score True --config config/nturgbd-cross-subject/vel.yaml --model model.BlockGCN.Model --work-dir work_dir/BlockGCN_jm  --device 0 1
+
+B
+python main.py --weights /home/featurize/data/block+数据处理/b/runs-115-29440.pt --phase test --save-score True --config config/nturgbd-cross-subject/bone.yaml --model model.BlockGCN.Model --work-dir work_dir/BlockGCN_b --device 0 1
+
+BM
+python main.py --weights /home/featurize/data/block+数据处理/bm/runs-137-35072.pt --phase test --save-score True --config /home/featurize/work/BlockGCN/config/nturgbd-cross-subject/bone_vel.yaml --model model.BlockGCN.Model --work-dir work_dir/BlockGCN_bm  --device 0 1
+
+
+注意更改权重的地址
+
+
+HDGCN:  
+
+python main.py --config ./config/nturgbd-cross-subject/joint_com_1.yaml  --phase test --save-score True --weights /mnt/workspace/block/HD-GCN/work_dir/joint_CoM_1/runs-79-20619.pt --device 0
+
+python main.py --config ./config/nturgbd-cross-subject/bone_com_1.yaml  --phase test --save-score True --weights /mnt/workspace/block/HD-GCN/work_dir/bone_CoM_1/runs-83-21663.pt --device 0
+
+python main.py --config ./config/nturgbd-cross-subject/joint_vel_com_1.yaml  --phase test --save-score True --weights /mnt/workspace/block/HD-GCN/work_dir/joint_vel_CoM_1/runs-87-22707.pt --device 0
+
+python main.py --config ./config/nturgbd-cross-subject/bone_vel_com_1.yaml  --phase test --save-score True --weights /mnt/workspace/block/HD-GCN/work_dir/bone_vel_CoM_1/runs-78-20358.pt --device 0
+
+注意更改权重的地址
+
+
+
+
+mixformer:      
+python main.py --config ./config/mixformer_V1_J.yaml --phase test --save-score True --weights ./checkpoints/mixformer_V1_J.pt --device 0  
+
+python main.py --config ./config/mixformer_V1_B.yaml --phase test --save-score True --weights ./checkpoints/mixformer_V1_B.pt --device 0 
+
+python main.py --config ./config/mixformer_V1_JM.yaml --phase test --save-score True --weights ./checkpoints/mixformer_V1_JM.pt --device 0 
+
+python main.py --config ./config/mixformer_V1_BM.yaml --phase test --save-score True --weights ./checkpoints/mixformer_V1_BM.pt --device 0 
+
+
+注意更改权重的地址
+
+MMCL:
+
+
+
+python main_MMCL.py --device 0 --config ./config/nturgbd-cross-subject/joint.yaml --phase test --weights <work_dir>.pt
+
+
+python main_MMCL.py --device 0 --config ./config/nturgbd-cross-subject/bone.yaml --phase test --weights <work_dir>.pt
+
+
+python main_MMCL.py --device 0 --config ./config/nturgbd-cross-subject/joint_motion.yaml --phase test --weights <work_dir>.pt
+
+
+python main_MMCL.py --device 0 --config ./config/nturgbd-cross-subject/bone_motion.yaml --phase test --weights <work_dir>.pt
+
+
+
+FR-Head+ctrgcn:
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jctr.yaml --work-dir results/uav/jctr --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jctr/runs-55-14355.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bctr.yaml --work-dir results/uav/bctr --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bctr/runs-54-14094.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jmctr.yaml --work-dir results/uav/jmctr --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jmctr/runs-63-16443.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bmctr.yaml --work-dir results/uav/bmctr --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bmctr/runs-54-14094.pt --device 0
+
+注意更改权重的地址
+
+
+
+FR-Head+tdgcn:
+
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jtd.yaml --work-dir results/uav/jtd --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jtd/runs-60-31320.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/btd.yaml --work-dir results/uav/btd --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/btd/runs-64-33408.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jmtd.yaml --work-dir results/uav/jmtd --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jmtd/runs-56-29232.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bmtd.yaml --work-dir results/uav/bmtd --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bmtd/runs-63-32886.pt --device 0
+
+
+
+
+FR-Head+mstgcn:
+
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jmst.yaml --work-dir results/uav/jmst --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jmst/runs-64-16704.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bmst.yaml --work-dir results/uav/bmst --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bmst/runs-63-16443.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jmmst.yaml --work-dir results/uav/jmmst --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jmmst/runs-56-14616.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bmmst.yaml --work-dir results/uav/bmmst --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bmmst/runs-64-16704.pt --device 0
+
+
+
+
+FR-Head+tcagcn:
+
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jtca.yaml --work-dir results/uav/jtca --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jtca/runs-54-56430.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/btca.yaml --work-dir results/uav/btca --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/btca/runs-56-58520.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jmtca.yaml --work-dir results/uav/jmtca --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jmtca/runs-54-56430.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bmtca.yaml --work-dir results/uav/bmtca --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bmtca/runs-52-54340.pt --device 0
+
+
+
+FR-Head+hdgcn:
+
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jhd.yaml --work-dir results/uav/jhd --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jhd/runs-54-56430.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bhd.yaml --work-dir results/uav/bhd --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bhd/runs-54-56430.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jmhd.yaml --work-dir results/uav/jmhd --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jmhd/runs-55-57475.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bmhd.yaml --work-dir results/uav/bmhd --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bmhd/runs-55-57475.pt --device 0
+
+
+FR-Head+MMCL:
+
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jmmcl.yaml --work-dir results/uav/jmmcl --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jmmcl/runs-64-16704.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bmmcl.yaml --work-dir results/uav/bmmcl --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bmmcl/runs-57-14877.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/jmmmcl.yaml --work-dir results/uav/jmmmcl --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/jmmmcl/runs-52-13572.pt --device 0
+
+python main.py --config /home/featurize/work/block/FR-Head/config/uav/bmmmcl.yaml --work-dir results/uav/bmmmcl --phase test --save-score True --weights /home/featurize/work/block/FR-Head/results/uav/bmmmcl/runs-58-15138.pt --device 0
+
+
+STTFormer
+cd  block\STTFormer
+
+python3 main.py --config config/ntu60_xsub_joint.yaml --run_mode test --save_score True --weights /home/featurize/work/block/STTFormer/work_dir/ntu60/xsub_joint/xsub_joint-64-.pt
+
+python3 main.py --config config/ntu60_xsub_bone.yaml --run_mode test --save_score True --weights /home/featurize/work/block/STTFormer/work_dir/ntu60/xsub_bone/xsub_bone-65-.pt
+
+注意更改权重的地址
+
+
+
+
+------------------------------------------------------------
+Degcn:
+degcn_model:
+
+python main.py --config config/nturgbd-cross-subject/degcnj.yaml --phase test --save-score True --weights /mnt/workspace/block/DeGCN_pytorch/work_dir/degcn_j_3d/20241101115114/epoch_97_24832.pt --device 0
+
+python main.py --config config/nturgbd-cross-subject/degcnjm.yaml --phase test --save-score True --weights /mnt/workspace/block/DeGCN_pytorch/work_dir/degcn_jm_3d/20241101120014/epoch_100_25600.pt --device 0
+
+python main.py --config config/nturgbd-cross-subject/degcnb.yaml --phase test --save-score True --weights /mnt/workspace/block/DeGCN_pytorch/work_dir/degcn_b_3d/20241101115114/epoch_97_24832.pt --device 0
+
+python main.py --config config/nturgbd-cross-subject/degcnbm.yaml --phase test --save-score True --weights /mnt/workspace/block/DeGCN_pytorch/work_dir/degcn_bm_3d/20241101120014/epoch_100_25600.pt --device 0
+
+
+---------------------------------------------------------
+jbf_model:
+python main.py --config config/nturgbd-cross-subject/jbfj.yaml --phase test --save-score True --weights /mnt/workspace/block/DeGCN_pytorch/work_dir/jbf_j_3d/20241101144303/epoch_95_24320.pt --device 0
+
+python main.py --config config/nturgbd-cross-subject/jbfjm.yaml --phase test --save-score True --weights /mnt/workspace/block/DeGCN_pytorch/work_dir/jbf_jm_3d/20241101144450/epoch_97_24832.pt --device 0
+
+python main.py --config config/nturgbd-cross-subject/jbfb.yaml --phase test --save-score True --weights /mnt/workspace/block/DeGCN_pytorch/work_dir/jbf_b_3d/20241101144303/epoch_95_24320.pt --device 0
+
+python main.py --config config/nturgbd-cross-subject/jbfbm.yaml --phase test --save-score True --weights /mnt/workspace/block/DeGCN_pytorch/work_dir/jbf_bm_3d/20241101144450/epoch_97_24832.pt --device 0
+
+
+注意更改权重的地址
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+四.集成模型
+运行Ensemble.py，生成集成的pred.npy,其中rate依据val的pkl与label进行贝叶斯优化得出（weight.py)和参考原来项目中ensemble.py给的权重包括每次提交的成绩进行调整
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+最后权重：
+ctrgcn中：J,B用了加FR-Head的，JM,BM用普通的
+
+tdgcn中：J,B用了加FR-Head的，JM,BM用普通的
+
+tcagcn用了加FR-Head的
+
+hdgcn用了加FR-Head的和普通的，都用了
+
+blockgcn：用J,B,JM,BM
+
+STTFormer用了J和B的
+
+degcn用了两个model：degcn和jbf模型，J,B,JM,BM
+
+
+MMCL:J,B用了加FR-Head的，JM,BM用普通的
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+五.weight网盘地址
+通过百度网盘分享的文件：model_weight.zip
+链接：https://pan.baidu.com/s/1vRFGmcQX2obgPVDpJy2MCg 
+提取码：h1wa
+
+
+
+C榜所有模型的score.pkl在scoreCC文件夹里
+日志在log文件夹里
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+集成比例以这个为准：
+
+
+Rate = [
+        0.1, 1.5,  # STTFormer J ,B
+        0.19060032933206877, 0.15, 0.3, 1.5,  # MMCL         JM,BM, J(FR-Head),B(FR-Head)
+        1.5, 1.5, 1.5, 1.0553545584180628,  # HDGCN   J,B, JM,BM
+        1.5, 1.5, 0.1, 1.5,  # HDGCN(FR-Head)   J,B, JM,BM
+        0.7, 1.5, 0.1, 0.1,  # BlockGCN   J,B, JM,BM
+        1.5, 1.5, 0.1, 0.1,  # CTRGCN J(FR-Head),B(FR-Head),JM,BM
+        0.644289268983005, 1.5, 0.1, 0.1,  # TDGCN J(FR-Head),B(FR-Head),JM,BM
+
+        1.3, 1.3, 0.3042270233860835, 0.1,  # TCAGCN(FR-Head)  J,B, JM,BM
+        0.1, 0.1, 0.1, 0.1,  # DEGCN  J,B, JM,BM
+        1.5, 1.5, 0.1, 0.1  # DEGCN(JBF) J,B, JM,BM
+    ]
+
+
+
+
+运行Ensemble.py用这个
+
+
+
+
+
+
+
+
+
+
